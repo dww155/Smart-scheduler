@@ -8,6 +8,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -36,6 +38,10 @@ public class Workspace {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "owner_id", nullable = false)
     User owner;
+
+    @Builder.Default
+    @OneToMany(mappedBy = "workspace", cascade = CascadeType.PERSIST, fetch = FetchType.LAZY)
+    Set<WorkspaceMember> members = new HashSet<>();
 
     @Column(name = "name", nullable = false, length = 100)
     String name;
@@ -74,5 +80,10 @@ public class Workspace {
         if (type == null) {
             type = WorkspaceType.PERSONAL;
         }
+    }
+
+    public void addMember(WorkspaceMember member) {
+        members.add(member);
+        member.setWorkspace(this);
     }
 }
