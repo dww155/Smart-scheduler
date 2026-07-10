@@ -1,11 +1,11 @@
 server:
   port: 8080
   servlet:
-    context-path: /chat-app
+    context-path: /smart-scheduler
 
 spring:
   application:
-    name: chat-app
+    name: smart-scheduler
 
   datasource:
     url: jdbc:postgresql://localhost:5432/smart-scheduler
