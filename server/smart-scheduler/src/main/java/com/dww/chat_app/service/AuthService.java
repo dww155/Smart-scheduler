@@ -4,7 +4,6 @@ import com.dww.chat_app.constant.UserConstant;
 import com.dww.chat_app.dto.auth.AuthRequest;
 import com.dww.chat_app.dto.auth.AuthResponse;
 import com.dww.chat_app.dto.auth.RegisterRequest;
-import com.dww.chat_app.dto.user.UserCreationRequest;
 import com.dww.chat_app.dto.user.UserResponse;
 import com.dww.chat_app.entity.Role;
 import com.dww.chat_app.entity.User;
