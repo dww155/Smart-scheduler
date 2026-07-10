@@ -38,16 +38,17 @@ class TodoEntityMappingTests {
                 .password("test-password")
                 .build());
 
-        Workspace workspace = entityManager.persist(Workspace.builder()
+        Workspace workspace = Workspace.builder()
                 .owner(user)
                 .name("Personal workspace " + uniqueSuffix)
-                .build());
+                .build();
 
-        WorkspaceMember workspaceMember = entityManager.persist(WorkspaceMember.builder()
-                .workspace(workspace)
+        WorkspaceMember workspaceMember = WorkspaceMember.builder()
                 .user(user)
                 .role(WorkspaceMemberRole.OWNER)
-                .build());
+                .build();
+        workspace.addMember(workspaceMember);
+        entityManager.persist(workspace);
 
         Project project = entityManager.persist(Project.builder()
                 .workspace(workspace)
