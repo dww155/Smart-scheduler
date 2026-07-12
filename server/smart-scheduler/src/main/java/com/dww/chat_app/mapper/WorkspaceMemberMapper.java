@@ -2,6 +2,7 @@ package com.dww.chat_app.mapper;
 
 import com.dww.chat_app.dto.workspace.WorkspaceMemberCreationRequest;
 import com.dww.chat_app.dto.workspace.WorkspaceMemberRoleUpdateRequest;
+import com.dww.chat_app.dto.workspace.WorkspaceMemberResponse;
 import com.dww.chat_app.entity.User;
 import com.dww.chat_app.entity.Workspace;
 import com.dww.chat_app.entity.WorkspaceMember;
@@ -29,4 +30,14 @@ public interface WorkspaceMemberMapper {
             WorkspaceMemberRoleUpdateRequest request,
             @MappingTarget WorkspaceMember workspaceMember
     );
+
+    @BeanMapping(ignoreByDefault = true)
+    @Mapping(target = "id", source = "id")
+    @Mapping(target = "workspaceId", source = "workspace.id")
+    @Mapping(target = "userId", source = "user.id")
+    @Mapping(target = "role", source = "role")
+    @Mapping(target = "joinedAt", source = "joinedAt")
+    @Mapping(target = "updatedAt", source = "updatedAt")
+    @Mapping(target = "version", source = "version")
+    WorkspaceMemberResponse toResponse(WorkspaceMember workspaceMember);
 }

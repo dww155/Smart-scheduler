@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/user")
+@RequestMapping({"/users", "/user"})
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @RequiredArgsConstructor
 public class UserController {
@@ -40,12 +40,12 @@ public class UserController {
         return ApiResponse.success(userService.getUsers());
     }
 
-    @GetMapping("/userId={userId}")
+    @GetMapping({"/{userId}", "/userId={userId}"})
     public ApiResponse<UserResponse> getUser(@PathVariable("userId") UUID userId) {
         return ApiResponse.success(userService.getUser(userId));
     }
 
-    @PutMapping("/userId={userId}")
+    @PutMapping({"/{userId}", "/userId={userId}"})
     public ApiResponse<UserResponse> updateUser(
             @PathVariable("userId") UUID userId,
             @Valid @RequestBody UserUpdateRequest request
@@ -53,7 +53,7 @@ public class UserController {
         return ApiResponse.success("Update user successfully", userService.updateUser(userId, request));
     }
 
-    @PatchMapping("/userId={userId}/status")
+    @PatchMapping({"/{userId}/status", "/userId={userId}/status"})
     public ApiResponse<Void> updateUserStatus(
             @PathVariable("userId") UUID userId,
             @Valid @RequestBody UserUpdateStatusRequest request
@@ -63,7 +63,7 @@ public class UserController {
         return ApiResponse.success("Update user status successfully");
     }
 
-    @DeleteMapping("/userId={userId}")
+    @DeleteMapping({"/{userId}", "/userId={userId}"})
     public ApiResponse<Void> deleteUser(@PathVariable("userId") UUID userId) {
         userService.deleteUser(userId);
 

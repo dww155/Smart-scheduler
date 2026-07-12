@@ -53,7 +53,7 @@ public class ApplicationInitConfig implements ApplicationRunner {
 
             userRepository.save(admin);
 
-            log.info("Admin created with password: {}", admin.getPassword());
+            log.info("Initial administrator account created");
 
         }
 
