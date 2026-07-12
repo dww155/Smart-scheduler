@@ -145,6 +145,9 @@ public class Task {
 
     @PrePersist
     public void persist() {
+        if (recurrenceRule != null && recurrenceRule.isBlank()) {
+            recurrenceRule = null;
+        }
         if (status == null) {
             status = TaskStatus.TODO;
         }

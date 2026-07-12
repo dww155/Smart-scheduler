@@ -17,6 +17,12 @@ public class WorkspaceMemberResponse {
 
     UUID userId;
 
+    String username;
+
+    String email;
+
+    boolean active;
+
     WorkspaceMemberRole role;
 
     LocalDateTime joinedAt;

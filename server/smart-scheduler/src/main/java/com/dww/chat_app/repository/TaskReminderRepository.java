@@ -16,7 +16,11 @@ import java.util.UUID;
 public interface TaskReminderRepository extends JpaRepository<TaskReminder, UUID> {
     Optional<TaskReminder> findByIdAndTaskId(UUID id, UUID taskId);
 
-    List<TaskReminder> findAllByTaskIdAndRecipientIdOrderByRemindAtAsc(UUID taskId, UUID recipientId);
+    List<TaskReminder> findAllByTaskIdAndRecipientIdAndStatusNotOrderByRemindAtAsc(
+            UUID taskId,
+            UUID recipientId,
+            ReminderStatus excludedStatus
+    );
 
     Page<TaskReminder> findAllByStatusAndRemindAtLessThanEqualOrderByRemindAtAsc(
             ReminderStatus status,

@@ -3,6 +3,7 @@ package com.dww.chat_app.service;
 import com.dww.chat_app.dto.workspace.WorkspaceMemberCreationRequest;
 import com.dww.chat_app.dto.workspace.WorkspaceMemberResponse;
 import com.dww.chat_app.dto.workspace.WorkspaceMemberRoleUpdateRequest;
+import com.dww.chat_app.dto.workspace.MemberCandidateResponse;
 import com.dww.chat_app.entity.User;
 import com.dww.chat_app.entity.Workspace;
 import com.dww.chat_app.entity.WorkspaceMember;
@@ -12,6 +13,7 @@ import com.dww.chat_app.exception.ErrorCode;
 import com.dww.chat_app.mapper.WorkspaceMemberMapper;
 import com.dww.chat_app.repository.UserRepository;
 import com.dww.chat_app.repository.WorkspaceMemberRepository;
+import com.dww.chat_app.repository.TaskRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -30,6 +32,7 @@ public class WorkspaceMemberService {
     UserRepository userRepository;
     WorkspaceMemberMapper workspaceMemberMapper;
     WorkspaceAccessService workspaceAccessService;
+    TaskRepository taskRepository;
 
     @Transactional
     public WorkspaceMemberResponse addMember(
@@ -60,6 +63,27 @@ public class WorkspaceMemberService {
         return workspaceMemberRepository.findAllByWorkspaceIdOrderByJoinedAtAsc(workspaceId)
                 .stream()
                 .map(workspaceMemberMapper::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<MemberCandidateResponse> getMemberCandidates(UUID workspaceId, String query) {
+        Workspace workspace = workspaceAccessService.getWorkspaceOrThrow(workspaceId);
+        workspaceAccessService.requireManager(workspace);
+        String normalizedQuery = query == null ? "" : query.trim().toLowerCase();
+
+        return userRepository.findAllByDeletedAtIsNull().stream()
+                .filter(User::isActive)
+                .filter(user -> !workspaceAccessService.isMember(workspaceId, user.getId()))
+                .filter(user -> normalizedQuery.isBlank()
+                        || user.getUsername().toLowerCase().contains(normalizedQuery)
+                        || user.getEmail() != null && user.getEmail().toLowerCase().contains(normalizedQuery))
+                .limit(20)
+                .map(user -> MemberCandidateResponse.builder()
+                        .id(user.getId())
+                        .username(user.getUsername())
+                        .email(user.getEmail())
+                        .build())
                 .toList();
     }
 
@@ -99,6 +123,13 @@ public class WorkspaceMemberService {
         if (isOwnerMembership(workspace, member)) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
+
+        var assignedTasks = taskRepository.findAllByAssigneeIdAndProjectWorkspaceIdAndDeletedAtIsNull(
+                member.getUser().getId(),
+                workspace.getId()
+        );
+        assignedTasks.forEach(task -> task.setAssignee(null));
+        taskRepository.saveAll(assignedTasks);
 
         workspaceMemberRepository.delete(member);
     }

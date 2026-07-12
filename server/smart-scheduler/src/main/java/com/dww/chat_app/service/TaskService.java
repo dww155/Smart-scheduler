@@ -17,6 +17,7 @@ import com.dww.chat_app.repository.ProjectRepository;
 import com.dww.chat_app.repository.TaskRepository;
 import com.dww.chat_app.repository.TaskSectionRepository;
 import com.dww.chat_app.repository.UserRepository;
+import com.dww.chat_app.repository.WorkspaceRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -45,6 +46,25 @@ public class TaskService {
     TaskMapper taskMapper;
     WorkspaceAccessService workspaceAccessService;
     TaskValidationService taskValidationService;
+    WorkspaceRepository workspaceRepository;
+
+    public List<TaskResponse> getVisibleTasks() {
+        User currentUser = workspaceAccessService.getCurrentUser();
+        List<UUID> workspaceIds = (workspaceAccessService.isCurrentUserGlobalAdmin()
+                ? workspaceRepository.findAllByDeletedAtIsNullOrderByCreatedAtDesc()
+                : workspaceRepository.findAllVisibleToUserId(currentUser.getId()))
+                .stream()
+                .map(workspace -> workspace.getId())
+                .toList();
+
+        if (workspaceIds.isEmpty()) {
+            return List.of();
+        }
+
+        return taskRepository.findAllVisibleByWorkspaceIds(workspaceIds).stream()
+                .map(taskMapper::toResponse)
+                .toList();
+    }
 
     public List<TaskResponse> getTasksByProject(UUID projectId) {
         Project project = getActiveProject(projectId);
@@ -125,8 +145,18 @@ public class TaskService {
         TaskContext context = getActiveTaskContext(taskId);
         workspaceAccessService.requireContributor(context.project().getWorkspace());
 
-        context.task().setDeletedAt(LocalDateTime.now());
-        taskRepository.save(context.task());
+        softDeleteTree(context.task(), new HashSet<>());
+    }
+
+    private void softDeleteTree(Task task, Set<UUID> visitedTaskIds) {
+        if (task.getId() == null || !visitedTaskIds.add(task.getId())) {
+            return;
+        }
+        LocalDateTime deletedAt = LocalDateTime.now();
+        taskRepository.findAllByParentTaskIdAndDeletedAtIsNullOrderBySortOrderAsc(task.getId())
+                .forEach(child -> softDeleteTree(child, visitedTaskIds));
+        task.setDeletedAt(deletedAt);
+        taskRepository.save(task);
     }
 
     @Transactional

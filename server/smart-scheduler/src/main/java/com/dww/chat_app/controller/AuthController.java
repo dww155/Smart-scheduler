@@ -4,6 +4,8 @@ import com.dww.chat_app.dto.ApiResponse;
 import com.dww.chat_app.dto.auth.AuthRequest;
 import com.dww.chat_app.dto.auth.AuthResponse;
 import com.dww.chat_app.dto.auth.RegisterRequest;
+import com.dww.chat_app.dto.auth.RefreshTokenRequest;
+import com.dww.chat_app.dto.auth.LogoutRequest;
 import com.dww.chat_app.dto.user.UserResponse;
 import com.dww.chat_app.service.AuthService;
 import jakarta.validation.Valid;
@@ -11,6 +13,7 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpHeaders;
 
 @RestController
 @RequestMapping("/auth")
@@ -32,6 +35,24 @@ public class AuthController {
         AuthResponse response = authService.register(request);
 
         return ApiResponse.success("Register successfully", response);
+    }
+
+    @PostMapping("/refresh")
+    public ApiResponse<AuthResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return ApiResponse.success("Token refreshed successfully", authService.refresh(request));
+    }
+
+    @PostMapping("/logout")
+    public ApiResponse<Void> logout(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
+            @RequestBody(required = false) LogoutRequest request
+    ) {
+        String accessToken = authorization != null && authorization.startsWith("Bearer ")
+                ? authorization.substring(7)
+                : authorization;
+        authService.logout(accessToken, request == null ? null : request.getRefreshToken());
+
+        return ApiResponse.success("Logout successfully");
     }
 
     @GetMapping("/myinfo")

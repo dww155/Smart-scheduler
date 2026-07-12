@@ -29,6 +29,11 @@ public class TaskController {
 
     TaskService taskService;
 
+    @GetMapping("/tasks")
+    public ApiResponse<List<TaskResponse>> getVisibleTasks() {
+        return ApiResponse.success(taskService.getVisibleTasks());
+    }
+
     @GetMapping("/projects/{projectId}/tasks")
     public ApiResponse<List<TaskResponse>> getTasksByProject(@PathVariable UUID projectId) {
         return ApiResponse.success(taskService.getTasksByProject(projectId));
