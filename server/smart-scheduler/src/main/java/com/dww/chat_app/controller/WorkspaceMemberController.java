@@ -4,6 +4,7 @@ import com.dww.chat_app.dto.ApiResponse;
 import com.dww.chat_app.dto.workspace.WorkspaceMemberCreationRequest;
 import com.dww.chat_app.dto.workspace.WorkspaceMemberResponse;
 import com.dww.chat_app.dto.workspace.WorkspaceMemberRoleUpdateRequest;
+import com.dww.chat_app.dto.workspace.MemberCandidateResponse;
 import com.dww.chat_app.service.WorkspaceMemberService;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 import java.util.UUID;
@@ -45,6 +47,14 @@ public class WorkspaceMemberController {
             @PathVariable("workspaceId") UUID workspaceId
     ) {
         return ApiResponse.success(workspaceMemberService.getMembers(workspaceId));
+    }
+
+    @GetMapping("/candidates")
+    public ApiResponse<List<MemberCandidateResponse>> getMemberCandidates(
+            @PathVariable("workspaceId") UUID workspaceId,
+            @RequestParam(defaultValue = "") String q
+    ) {
+        return ApiResponse.success(workspaceMemberService.getMemberCandidates(workspaceId, q));
     }
 
     @GetMapping("/{memberId}")

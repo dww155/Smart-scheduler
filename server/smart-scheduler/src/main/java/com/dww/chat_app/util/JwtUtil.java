@@ -2,8 +2,6 @@ package com.dww.chat_app.util;
 
 import com.dww.chat_app.entity.Role;
 import com.dww.chat_app.entity.User;
-import com.dww.chat_app.exception.AppException;
-import com.dww.chat_app.exception.ErrorCode;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
@@ -12,6 +10,7 @@ import com.nimbusds.jwt.SignedJWT;
 import lombok.experimental.NonFinal;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.oauth2.jwt.BadJwtException;
 import org.springframework.stereotype.Component;
 
 import java.text.ParseException;
@@ -19,10 +18,15 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
 public class JwtUtil {
+
+    public static final String TOKEN_TYPE_CLAIM = "token_type";
+    public static final String ACCESS_TOKEN_TYPE = "access";
+    public static final String REFRESH_TOKEN_TYPE = "refresh";
 
     @NonFinal
     @Value("${jwt.secret}")
@@ -36,7 +40,7 @@ public class JwtUtil {
     @Value("${jwt.refreshable-time}")
     long REFRESHABLE_TIME;
 
-    private String generateToken(User user, long expiryTime) {
+    private String generateToken(User user, long expiryTime, String tokenType) {
 
         // create header
         JWSHeader header = new JWSHeader(JWSAlgorithm.HS256);
@@ -46,6 +50,7 @@ public class JwtUtil {
                 .jwtID(UUID.randomUUID().toString())
                 .subject(user.getUsername())
                 .claim("scope", buildScope(user))
+                .claim(TOKEN_TYPE_CLAIM, tokenType)
                 .issuer("dww")
                 .issueTime(new Date())
                 .expirationTime(new Date(Instant.now().plus(expiryTime, ChronoUnit.SECONDS).toEpochMilli()))
@@ -60,35 +65,50 @@ public class JwtUtil {
             MACSigner signer = new MACSigner((SIGNER_KEY.getBytes()));
             object.sign(signer);
         } catch (JOSEException e) {
-            log.info(e.getMessage());
-            throw new RuntimeException(e);
+            log.error("Unable to sign JWT", e);
+            throw new IllegalStateException("Unable to sign JWT", e);
         }
         return object.serialize();
     }
 
-    private String buildScope(User user) {
-
-        // build scope
-        StringBuilder scopes = new StringBuilder();
-
-        for (Role role : user.getRoles()) {
-            String roleName = role.getName();
-
-            scopes.append(String.format("ROLE_%s ", roleName.toUpperCase()));
+    public String buildScope(User user) {
+        if (user.getRoles() == null || user.getRoles().isEmpty()) {
+            return "";
         }
 
-        return scopes.toString().trim();
+        return user.getRoles().stream()
+                .map(Role::getName)
+                .filter(roleName -> roleName != null && !roleName.isBlank())
+                .map(roleName -> "ROLE_" + roleName.toUpperCase())
+                .sorted()
+                .collect(Collectors.joining(" "));
     }
 
     public String generateAcessToken(User user) {
-        return generateToken(user, EXPIRY_TIME);
+        return generateAccessToken(user);
+    }
+
+    public String generateAccessToken(User user) {
+        return generateToken(user, EXPIRY_TIME, ACCESS_TOKEN_TYPE);
     }
 
     public String generateRefreshToken(User user) {
-        return generateToken(user, REFRESHABLE_TIME);
+        return generateToken(user, REFRESHABLE_TIME, REFRESH_TOKEN_TYPE);
     }
 
     public SignedJWT verify(String token) {
+        return verifyToken(token, null);
+    }
+
+    public SignedJWT verifyAccessToken(String token) {
+        return verifyToken(token, ACCESS_TOKEN_TYPE);
+    }
+
+    public SignedJWT verifyRefreshToken(String token) {
+        return verifyToken(token, REFRESH_TOKEN_TYPE);
+    }
+
+    private SignedJWT verifyToken(String token, String expectedTokenType) {
         try {
             // parse token
             SignedJWT jwt = SignedJWT.parse(token);
@@ -100,15 +120,20 @@ public class JwtUtil {
             // check expiry time
             Date expirationTime = jwt.getJWTClaimsSet().getExpirationTime();
             Date now = new Date();
-            boolean validExpiry = now.before(expirationTime);
+            boolean validExpiry = expirationTime != null && now.before(expirationTime);
+
+            String tokenType = jwt.getJWTClaimsSet().getStringClaim(TOKEN_TYPE_CLAIM);
+            boolean validType = expectedTokenType == null || expectedTokenType.equals(tokenType);
 
             // summary check
-            if (!validSigner || !validExpiry)
-                throw new AppException(ErrorCode.UNAUTHORIZED);
+            if (!validSigner || !validExpiry || !validType)
+                throw new BadJwtException("Invalid or expired token");
 
             return jwt;
-        } catch (ParseException | JOSEException e) {
-            throw new RuntimeException(e);
+        } catch (BadJwtException exception) {
+            throw exception;
+        } catch (ParseException | JOSEException | RuntimeException e) {
+            throw new BadJwtException("Invalid token", e);
         }
     }
 }

@@ -4,14 +4,17 @@ import com.dww.chat_app.constant.UserConstant;
 import com.dww.chat_app.dto.auth.AuthRequest;
 import com.dww.chat_app.dto.auth.AuthResponse;
 import com.dww.chat_app.dto.auth.RegisterRequest;
+import com.dww.chat_app.dto.auth.RefreshTokenRequest;
 import com.dww.chat_app.dto.user.UserResponse;
 import com.dww.chat_app.entity.Role;
 import com.dww.chat_app.entity.User;
+import com.dww.chat_app.entity.InvalidatedToken;
 import com.dww.chat_app.exception.AppException;
 import com.dww.chat_app.exception.ErrorCode;
 import com.dww.chat_app.mapper.UserMapper;
 import com.dww.chat_app.repository.RoleRepository;
 import com.dww.chat_app.repository.UserRepository;
+import com.dww.chat_app.repository.InvalidatedTokenRepository;
 import com.dww.chat_app.util.JwtUtil;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +25,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Set;
+import java.util.UUID;
+import java.time.LocalDateTime;
+import java.text.ParseException;
+
+import com.nimbusds.jwt.SignedJWT;
+import org.springframework.security.oauth2.jwt.JwtException;
 
 @Service
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -36,6 +45,8 @@ public class AuthService {
     JwtUtil jwtUtil;
 
     PasswordEncoder passwordEncoder;
+
+    InvalidatedTokenRepository invalidatedTokenRepository;
 
     @Transactional(readOnly = true)
     public AuthResponse login(AuthRequest request) {
@@ -85,6 +96,67 @@ public class AuthService {
                 .accessToken(jwtUtil.generateAcessToken(savedUser))
                 .refreshToken(jwtUtil.generateRefreshToken(savedUser))
                 .build();
+    }
+
+    @Transactional
+    public AuthResponse refresh(RefreshTokenRequest request) {
+        SignedJWT refreshToken;
+        try {
+            refreshToken = jwtUtil.verifyRefreshToken(request.getRefreshToken());
+            UUID jwtId = UUID.fromString(refreshToken.getJWTClaimsSet().getJWTID());
+            if (invalidatedTokenRepository.existsById(jwtId)) {
+                throw new AppException(ErrorCode.INVALID_TOKEN);
+            }
+
+            String username = refreshToken.getJWTClaimsSet().getSubject();
+            User user = userRepository.findByUsernameAndActiveTrueAndDeletedAtIsNull(username)
+                    .orElseThrow(() -> new AppException(ErrorCode.UNAUTHENTICATED));
+
+            invalidate(refreshToken);
+
+            return AuthResponse.builder()
+                    .valid(true)
+                    .accessToken(jwtUtil.generateAccessToken(user))
+                    .refreshToken(jwtUtil.generateRefreshToken(user))
+                    .build();
+        } catch (ParseException | IllegalArgumentException | JwtException exception) {
+            throw new AppException(ErrorCode.INVALID_TOKEN);
+        }
+    }
+
+    @Transactional
+    public void logout(String accessToken, String refreshToken) {
+        invalidateSafely(accessToken, false);
+        invalidateSafely(refreshToken, true);
+    }
+
+    private void invalidateSafely(String token, boolean refresh) {
+        if (token == null || token.isBlank()) {
+            return;
+        }
+
+        try {
+            SignedJWT signedJWT = refresh
+                    ? jwtUtil.verifyRefreshToken(token)
+                    : jwtUtil.verifyAccessToken(token);
+            invalidate(signedJWT);
+        } catch (JwtException ignored) {
+            // Logout stays idempotent when a token is already expired or malformed.
+        }
+    }
+
+    private void invalidate(SignedJWT token) {
+        try {
+            UUID jwtId = UUID.fromString(token.getJWTClaimsSet().getJWTID());
+            if (!invalidatedTokenRepository.existsById(jwtId)) {
+                invalidatedTokenRepository.save(InvalidatedToken.builder()
+                        .jwtId(jwtId)
+                        .time(LocalDateTime.now())
+                        .build());
+            }
+        } catch (ParseException | IllegalArgumentException exception) {
+            throw new AppException(ErrorCode.INVALID_TOKEN);
+        }
     }
 
     @Transactional(readOnly = true)

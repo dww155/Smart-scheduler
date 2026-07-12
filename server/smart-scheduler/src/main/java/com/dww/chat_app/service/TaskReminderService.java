@@ -38,7 +38,11 @@ public class TaskReminderService {
         Task task = getReadableTask(taskId);
         User currentUser = workspaceAccessService.getCurrentUser();
 
-        return taskReminderRepository.findAllByTaskIdAndRecipientIdOrderByRemindAtAsc(task.getId(), currentUser.getId())
+        return taskReminderRepository.findAllByTaskIdAndRecipientIdAndStatusNotOrderByRemindAtAsc(
+                        task.getId(),
+                        currentUser.getId(),
+                        ReminderStatus.CANCELLED
+                )
                 .stream()
                 .map(taskReminderMapper::toResponse)
                 .toList();

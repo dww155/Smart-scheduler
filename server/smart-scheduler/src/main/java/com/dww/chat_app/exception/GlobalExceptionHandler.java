@@ -11,6 +11,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -60,6 +61,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiResponse<Void>> handleAuthenticationException(AuthenticationException exception) {
         return error(ErrorCode.UNAUTHENTICATED);
+    }
+
+    @ExceptionHandler(JwtException.class)
+    public ResponseEntity<ApiResponse<Void>> handleJwtException(JwtException exception) {
+        return error(ErrorCode.INVALID_TOKEN);
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

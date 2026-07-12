@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 import java.util.UUID;
 
 @Data
@@ -20,6 +21,8 @@ public class UserResponse {
     String email;
 
     boolean active;
+
+    Set<String> roleNames;
 
     LocalDateTime createdAt;
 

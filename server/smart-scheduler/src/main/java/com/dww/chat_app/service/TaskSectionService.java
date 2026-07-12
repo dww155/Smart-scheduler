@@ -11,6 +11,7 @@ import com.dww.chat_app.exception.ErrorCode;
 import com.dww.chat_app.mapper.TaskSectionMapper;
 import com.dww.chat_app.repository.ProjectRepository;
 import com.dww.chat_app.repository.TaskSectionRepository;
+import com.dww.chat_app.repository.TaskRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -30,6 +31,7 @@ public class TaskSectionService {
     TaskSectionRepository taskSectionRepository;
     TaskSectionMapper taskSectionMapper;
     WorkspaceAccessService workspaceAccessService;
+    TaskRepository taskRepository;
 
     @Transactional
     public TaskSectionResponse createSection(
@@ -88,6 +90,10 @@ public class TaskSectionService {
         workspaceAccessService.requireManager(workspace);
         Project project = findActiveProject(workspace, projectId);
         TaskSection section = findActiveSection(project, sectionId);
+
+        var affectedTasks = taskRepository.findAllBySectionIdAndDeletedAtIsNullOrderBySortOrderAsc(section.getId());
+        affectedTasks.forEach(task -> task.setSection(null));
+        taskRepository.saveAll(affectedTasks);
 
         section.setArchivedAt(LocalDateTime.now());
         taskSectionRepository.save(section);

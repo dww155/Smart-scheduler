@@ -10,6 +10,7 @@ import com.dww.chat_app.exception.AppException;
 import com.dww.chat_app.exception.ErrorCode;
 import com.dww.chat_app.mapper.LabelMapper;
 import com.dww.chat_app.repository.LabelRepository;
+import com.dww.chat_app.repository.TaskRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -28,6 +29,7 @@ public class LabelService {
     LabelRepository labelRepository;
     LabelMapper labelMapper;
     WorkspaceAccessService workspaceAccessService;
+    TaskRepository taskRepository;
 
     @Transactional
     public LabelResponse createLabel(UUID workspaceId, LabelCreationRequest request) {
@@ -77,6 +79,10 @@ public class LabelService {
         Workspace workspace = workspaceAccessService.getWorkspaceOrThrow(workspaceId);
         workspaceAccessService.requireManager(workspace);
         Label label = findActiveLabel(workspace, labelId);
+
+        var affectedTasks = taskRepository.findAllByLabelsIdAndDeletedAtIsNull(label.getId());
+        affectedTasks.forEach(task -> task.getLabels().removeIf(item -> item.getId().equals(label.getId())));
+        taskRepository.saveAll(affectedTasks);
 
         label.setArchivedAt(LocalDateTime.now());
         labelRepository.save(label);
