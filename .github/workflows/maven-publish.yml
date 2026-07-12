@@ -1,61 +1,23 @@
-name: Backend CI and Maven package
+name: Publish backend Maven package
 
 on:
-  push:
-    branches: [main, D]
-    paths:
-      - 'server/smart-scheduler/**'
-      - '.github/workflows/maven-publish.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'server/smart-scheduler/**'
-      - '.github/workflows/maven-publish.yml'
   release:
     types: [published]
   workflow_dispatch:
 
 permissions:
   contents: read
+  packages: write
 
 concurrency:
-  group: backend-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: maven-publish-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  build:
-    name: Build and test
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    defaults:
-      run:
-        working-directory: server/smart-scheduler
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-
-      - name: Set up JDK 21 and Maven
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: '21'
-          cache: maven
-          cache-dependency-path: server/smart-scheduler/pom.xml
-
-      - name: Build and test backend
-        run: ./mvnw --batch-mode --no-transfer-progress clean verify
-
   publish:
-    name: Publish to GitHub Packages
-    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
-    needs: build
+    name: Build and publish
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    permissions:
-      contents: read
-      packages: write
 
     defaults:
       run:
@@ -76,9 +38,9 @@ jobs:
           server-username: GITHUB_ACTOR
           server-password: GITHUB_TOKEN
 
-      - name: Build and publish to GitHub Packages
+      - name: Build, test, and publish to GitHub Packages
         run: >-
-          ./mvnw --batch-mode --no-transfer-progress clean deploy -DskipTests
+          ./mvnw --batch-mode --no-transfer-progress clean deploy
           -DaltDeploymentRepository=github::https://maven.pkg.github.com/${{ github.repository }}
         env:
           GITHUB_ACTOR: ${{ github.actor }}
