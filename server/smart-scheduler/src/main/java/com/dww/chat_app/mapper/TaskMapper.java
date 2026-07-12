@@ -1,6 +1,7 @@
 package com.dww.chat_app.mapper;
 
 import com.dww.chat_app.dto.task.TaskCreationRequest;
+import com.dww.chat_app.dto.task.TaskResponse;
 import com.dww.chat_app.dto.task.TaskStatusUpdateRequest;
 import com.dww.chat_app.dto.task.TaskUpdateRequest;
 import com.dww.chat_app.entity.Label;
@@ -15,7 +16,10 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Mapper(config = TodoMapperConfig.class)
 public interface TaskMapper {
@@ -82,5 +86,43 @@ public interface TaskMapper {
         } else {
             task.setCompletedAt(null);
         }
+    }
+
+    @BeanMapping(ignoreByDefault = true)
+    @Mapping(target = "id", source = "id")
+    @Mapping(target = "projectId", source = "project.id")
+    @Mapping(target = "sectionId", source = "section.id")
+    @Mapping(target = "parentTaskId", source = "parentTask.id")
+    @Mapping(target = "createdById", source = "createdBy.id")
+    @Mapping(target = "assigneeId", source = "assignee.id")
+    @Mapping(target = "title", source = "title")
+    @Mapping(target = "description", source = "description")
+    @Mapping(target = "status", source = "status")
+    @Mapping(target = "priority", source = "priority")
+    @Mapping(target = "startAt", source = "startAt")
+    @Mapping(target = "dueAt", source = "dueAt")
+    @Mapping(target = "allDay", source = "allDay")
+    @Mapping(target = "recurrenceRule", source = "recurrenceRule")
+    @Mapping(target = "recurrenceMode", source = "recurrenceMode")
+    @Mapping(target = "timeZone", source = "timeZone")
+    @Mapping(target = "completedAt", source = "completedAt")
+    @Mapping(target = "archivedAt", source = "archivedAt")
+    @Mapping(target = "deletedAt", source = "deletedAt")
+    @Mapping(target = "sortOrder", source = "sortOrder")
+    @Mapping(target = "labelIds", expression = "java(toLabelIds(task.getLabels()))")
+    @Mapping(target = "createdAt", source = "createdAt")
+    @Mapping(target = "updatedAt", source = "updatedAt")
+    @Mapping(target = "version", source = "version")
+    TaskResponse toResponse(Task task);
+
+    default Set<UUID> toLabelIds(Set<Label> labels) {
+        if (labels == null || labels.isEmpty()) {
+            return Set.of();
+        }
+
+        return labels.stream()
+                .map(Label::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toUnmodifiableSet());
     }
 }

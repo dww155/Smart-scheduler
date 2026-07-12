@@ -1,6 +1,7 @@
 package com.dww.chat_app.mapper;
 
 import com.dww.chat_app.dto.task.ChecklistItemCreationRequest;
+import com.dww.chat_app.dto.task.ChecklistItemResponse;
 import com.dww.chat_app.dto.task.ChecklistItemStatusUpdateRequest;
 import com.dww.chat_app.dto.task.ChecklistItemUpdateRequest;
 import com.dww.chat_app.entity.ChecklistItem;
@@ -44,4 +45,16 @@ public interface ChecklistItemMapper {
             checklistItem.setCompletedAt(null);
         }
     }
+
+    @BeanMapping(ignoreByDefault = true)
+    @Mapping(target = "id", source = "id")
+    @Mapping(target = "taskId", source = "task.id")
+    @Mapping(target = "content", source = "content")
+    @Mapping(target = "completed", source = "completed")
+    @Mapping(target = "completedAt", source = "completedAt")
+    @Mapping(target = "sortOrder", source = "sortOrder")
+    @Mapping(target = "createdAt", source = "createdAt")
+    @Mapping(target = "updatedAt", source = "updatedAt")
+    @Mapping(target = "version", source = "version")
+    ChecklistItemResponse toResponse(ChecklistItem checklistItem);
 }

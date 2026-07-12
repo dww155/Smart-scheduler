@@ -37,17 +37,17 @@ public class UserService {
 
     PasswordEncoder passwordEncoder;
 
+    WorkspaceAccessService workspaceAccessService;
+
     @Transactional
     @PreAuthorize("hasRole('ADMIN')")
     public UserResponse createUser(UserCreationRequest request) {
         validateUsernameIsAvailable(request.getUsername());
         validateEmailIsAvailable(request.getEmail());
 
-        // mapping
         User user = userMapper.toUser(request);
 
-        //set roles
-        Set<Role> roles = new HashSet<>(roleRepository.findAllById(request.getRoleNames()));
+        Set<Role> roles = resolveRoles(request.getRoleNames());
         user.setRoles(roles);
 
         user.setPassword(passwordEncoder.encode(user.getPassword()));
@@ -58,7 +58,7 @@ public class UserService {
     @Transactional(readOnly = true)
     @PreAuthorize("hasRole('ADMIN')")
     public List<UserResponse> getUsers() {
-        return userRepository.findAll()
+        return userRepository.findAllByDeletedAtIsNull()
                 .stream()
                 .map(userMapper::toUserResponse)
                 .toList();
@@ -72,6 +72,11 @@ public class UserService {
 
     @Transactional
     public UserResponse updateUser(UUID userId, UserUpdateRequest request) {
+        if (!workspaceAccessService.isCurrentUserGlobalAdmin()
+                && !workspaceAccessService.isCurrentUser(userId)) {
+            throw new AppException(ErrorCode.FORBIDDEN);
+        }
+
         User user = findUserById(userId);
 
         if (!user.getUsername().equals(request.getUsername())
@@ -97,10 +102,8 @@ public class UserService {
     public void updateUserStatus(UUID userId, UserUpdateStatusRequest request) {
         User user = findUserById(userId);
 
-        //set roles
         if (request.getRoleNames() != null) {
-            Set<Role> roles = new HashSet<>(roleRepository.findAllById(request.getRoleNames()));
-            user.setRoles(roles);
+            user.setRoles(resolveRoles(request.getRoleNames()));
         }
 
         if (request.getActive() != null)
@@ -108,7 +111,7 @@ public class UserService {
     }
 
     private User findUserById(UUID userId) {
-        return userRepository.findById(userId)
+        return userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
     }
 
@@ -122,5 +125,19 @@ public class UserService {
         if (userRepository.existsByEmail(email)) {
             throw new AppException(ErrorCode.USER_ALREADY_EXISTS);
         }
+    }
+
+    private Set<Role> resolveRoles(List<String> roleNames) {
+        if (roleNames == null || roleNames.isEmpty()) {
+            throw new AppException(ErrorCode.ROLE_REQUIRED);
+        }
+
+        Set<String> uniqueRoleNames = new HashSet<>(roleNames);
+        Set<Role> roles = new HashSet<>(roleRepository.findAllById(uniqueRoleNames));
+        if (roles.size() != uniqueRoleNames.size()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        return roles;
     }
 }

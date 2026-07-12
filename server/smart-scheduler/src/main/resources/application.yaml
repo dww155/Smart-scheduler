@@ -43,3 +43,7 @@ jwt:
   secret: aWNld2lzaHJhdGhlcm5vYm9keWRyYXdwcm92aWRlaHVuZHJlZHBhc3R0cnlzZW50cHU=
   expiry-time: 3600         #seconds
   refreshable-time: 604800  #seconds
+
+storage:
+  local:
+    root-directory: ${FILE_STORAGE_ROOT:./uploads}

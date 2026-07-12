@@ -1,6 +1,7 @@
 package com.dww.chat_app.mapper;
 
 import com.dww.chat_app.dto.task.TaskAttachmentCreationRequest;
+import com.dww.chat_app.dto.task.TaskAttachmentResponse;
 import com.dww.chat_app.dto.task.TaskAttachmentUpdateRequest;
 import com.dww.chat_app.entity.Task;
 import com.dww.chat_app.entity.TaskAttachment;
@@ -69,4 +70,17 @@ public interface TaskAttachmentMapper {
 
         return file.getContentType();
     }
+
+    @BeanMapping(ignoreByDefault = true)
+    @Mapping(target = "id", source = "id")
+    @Mapping(target = "taskId", source = "task.id")
+    @Mapping(target = "uploadedById", source = "uploadedBy.id")
+    @Mapping(target = "originalFileName", source = "originalFileName")
+    @Mapping(target = "contentType", source = "contentType")
+    @Mapping(target = "sizeBytes", source = "sizeBytes")
+    @Mapping(target = "deletedAt", source = "deletedAt")
+    @Mapping(target = "createdAt", source = "createdAt")
+    @Mapping(target = "updatedAt", source = "updatedAt")
+    @Mapping(target = "version", source = "version")
+    TaskAttachmentResponse toResponse(TaskAttachment attachment);
 }

@@ -1,6 +1,7 @@
 package com.dww.chat_app.mapper;
 
 import com.dww.chat_app.dto.task.TaskReminderCreationRequest;
+import com.dww.chat_app.dto.task.TaskReminderResponse;
 import com.dww.chat_app.dto.task.TaskReminderUpdateRequest;
 import com.dww.chat_app.entity.Task;
 import com.dww.chat_app.entity.TaskReminder;
@@ -29,4 +30,18 @@ public interface TaskReminderMapper {
             TaskReminderUpdateRequest request,
             @MappingTarget TaskReminder reminder
     );
+
+    @BeanMapping(ignoreByDefault = true)
+    @Mapping(target = "id", source = "id")
+    @Mapping(target = "taskId", source = "task.id")
+    @Mapping(target = "recipientId", source = "recipient.id")
+    @Mapping(target = "remindAt", source = "remindAt")
+    @Mapping(target = "timeZone", source = "timeZone")
+    @Mapping(target = "channel", source = "channel")
+    @Mapping(target = "status", source = "status")
+    @Mapping(target = "sentAt", source = "sentAt")
+    @Mapping(target = "createdAt", source = "createdAt")
+    @Mapping(target = "updatedAt", source = "updatedAt")
+    @Mapping(target = "version", source = "version")
+    TaskReminderResponse toResponse(TaskReminder reminder);
 }

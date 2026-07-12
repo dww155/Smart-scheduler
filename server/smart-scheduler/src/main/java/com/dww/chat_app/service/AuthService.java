@@ -66,15 +66,15 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        // check user existed or not
-        if (userRepository.existsByUsername(request.getUsername()))
+        if (userRepository.existsByUsername(request.getUsername())
+                || userRepository.existsByEmail(request.getEmail())) {
             throw new AppException(ErrorCode.USER_ALREADY_EXISTS);
+        }
 
         User user = userMapper.toUser(request);
 
         user.setPassword(passwordEncoder.encode(user.getPassword()));
 
-        // set roles
         Role userRole = roleRepository.findById(UserConstant.ROLE_USER).orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND));
         user.setRoles(Set.of(userRole));
 
